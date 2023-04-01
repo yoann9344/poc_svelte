@@ -14,6 +14,7 @@ pub struct ClosureBindInputTemplate {
     name: String,
     bind_ident: Ident,
     number_type: Option<String>,
+    insert_updated_ident: String,
 }
 
 pub struct ClosureBindInput {
@@ -47,13 +48,16 @@ impl ClosureBindInput {
         } else {
             value = format!("state.borrow().{}", init_ident);
         }
-        init_value = format!("{}.set_value_as_number({});", element_name, value);
+        init_value = format!("self.{}.set_value_as_number(self.{});", element_name, value);
         update_value = format!("self.{}.set_value_as_number(self.{});", element_name, value);
 
         let template = ClosureBindInputTemplate {
             name: name.to_string(),
             bind_ident: ident.clone(),
             number_type,
+            insert_updated_ident: format!(
+                r#"s.borrow_mut().updated_idents.insert("{init_ident}".to_string());"#
+            ),
         };
         Self {
             callback_on_change: (
@@ -71,6 +75,7 @@ impl ClosureBindInput {
 pub struct ClosureTemplate {
     name: String,
     statements: Vec<String>,
+    modified_idents: Vec<String>,
 }
 
 impl ClosureTemplate {
@@ -88,9 +93,23 @@ impl ClosureTemplate {
             }) => statements = stmts.iter().map(|s| quote!(#s).to_string()).collect(),
             expr => statements = vec![quote!(#expr;).to_string()],
         }
+        let mut modified_idents = Vec::new();
+        for modified in ident_modifier.names_refmut.drain() {
+            modified_idents.push(format!(
+                r#"s.borrow_mut().updated_idents.insert("{modified}".to_string());"#
+            ));
+        }
         (
             name.clone(),
-            clean_up_generated(Self { name, statements }.render_once().unwrap()),
+            clean_up_generated(
+                Self {
+                    name,
+                    statements,
+                    modified_idents,
+                }
+                .render_once()
+                .unwrap(),
+            ),
         )
     }
 }

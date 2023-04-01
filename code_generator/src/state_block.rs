@@ -21,6 +21,23 @@ pub struct LocalDetails {
 }
 
 impl LocalDetails {
+    pub fn get_ident_modifier(&self, state_ident: &str) -> super::visitor::IdentModifier {
+        println!(
+            "LocalDetails.states.idents : {:?}",
+            self.states
+                .iter()
+                .map(|State { ident, .. }| ident.to_string())
+                .collect::<Vec<_>>()
+        );
+        super::visitor::IdentModifier::new(
+            self.states
+                .iter()
+                .map(|State { ident, .. }| ident.to_string())
+                .collect(),
+            state_ident.to_string(),
+        )
+    }
+
     pub fn states_contains_ident(&self, ident: &Ident) -> Result<()> {
         if self
             .states
@@ -74,7 +91,7 @@ pub fn extract_locals(block: &Block) -> Result<LocalDetails> {
                     }),
                 ..
             } => {
-                assert_eq!(quote::quote!(#path_type).to_string(), "u32");
+                // assert_eq!(quote::quote!(#path_type).to_string(), "u32");
                 match *pat_ident.clone() {
                     Pat::Ident(PatIdent { ident, .. }) => {
                         details.states.push(State {

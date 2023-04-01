@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{quote, ToTokens};
@@ -9,22 +11,27 @@ use syn::{
 use crate::{
     html::Element,
     state_block::{LocalDetails, State},
-    visitor::IdentModifier,
 };
 
-use super::{nodes::Dom, ClosureTemplate};
+use super::{
+    nodes::{Dom, State as StateTemplate},
+    ClosureTemplate,
+};
 
 #[derive(TemplateOnce)]
 #[template(path = "component.rs", escape = false)]
 pub struct Component {
-    pub state_init_block: String,
-    pub state_fields_type: Vec<String>,
-    pub state_fields_value: Vec<String>,
-    pub callbacks: Vec<(String, String)>,
-    pub init: Vec<String>,
-    pub update: Vec<String>,
-    pub drop: Vec<String>,
-    pub dom_state: Vec<(String, String)>,
+    // pub init_block: String,
+    // pub fields_type: Vec<String>,
+    // pub fields_value: Vec<String>,
+    // pub callbacks: Vec<(String, String)>,
+    // pub init: Vec<String>,
+    // pub mount: Vec<String>,
+    // pub mount_mounted: Vec<String>,
+    // pub update: Vec<String>,
+    // pub drop: Vec<String>,
+    // pub dom_state: Vec<(String, String)>,
+    pub dom: Dom,
 }
 
 pub fn clean_up_generated(generated: String) -> String {
@@ -33,13 +40,13 @@ pub fn clean_up_generated(generated: String) -> String {
 
 impl Component {
     pub fn new(local_details: &mut LocalDetails, elements: &Vec<Element>) -> Self {
-        let state_init_block = local_details
+        let init_block = local_details
             .states
             .iter()
             .map(|State { local, .. }| quote! {#local}.to_string())
             .collect::<Vec<String>>()
             .join("\n");
-        let state_fields_type = local_details
+        let fields_type = local_details
             .states
             .iter()
             .map(|details| {
@@ -49,21 +56,30 @@ impl Component {
                 )
             })
             .collect();
-        let state_fields_value = local_details
+        let fields_value = local_details
             .states
             .iter()
             .map(|details| gen_field_value_shorthand(&details.ident.to_string()))
             .collect();
 
-        let mut ident_modifier = IdentModifier::new(
+        // let mut ident_modifier = IdentModifier::new(
+        //     local_details
+        //         .states
+        //         .iter()
+        //         .map(|State { ident, .. }| ident.to_string())
+        //         .collect(),
+        // );
+        let mut ident_modifier = local_details.get_ident_modifier("s");
+        println!(
+            "Event closure names : {:?}",
             local_details
-                .states
+                .events_closures
                 .iter()
-                .map(|State { ident, .. }| ident.to_string())
-                .collect(),
+                .map(|ec| ec.ident.to_string())
+                .collect::<Vec<_>>()
         );
 
-        let mut callbacks: Vec<(String, String)> = local_details
+        let callbacks: Vec<(String, String)> = local_details
             .events_closures
             .iter_mut()
             .map(|event_closure| {
@@ -71,32 +87,15 @@ impl Component {
             })
             .collect();
 
-        // // TODO: Handle binding dynamically
-        // callbacks.push(ClosureBindInputTemplate::string(
-        //     "input_0_bind_value",
-        //     local_details.states.get(0).unwrap(),
-        // ));
-        let mut dom = Dom::generate(elements, local_details);
-        callbacks.append(&mut dom.binded_callbacks);
-
-        let Dom {
-            init,
-            update,
-            drop,
-            dom_state,
-            ..
-        } = dom;
-
-        Self {
-            state_init_block,
-            state_fields_type,
-            state_fields_value,
+        let state = Rc::new(RefCell::new(StateTemplate {
+            init_block,
+            fields_type,
+            fields_value,
             callbacks,
-            init,
-            update,
-            drop,
-            dom_state, // callbacks: vec!["".to_string(), "".to_string()],
-        }
+        }));
+        let dom = Dom::generate(elements, local_details, state.clone(), true);
+
+        Self { dom }
     }
     pub fn to_token_stream(self) -> TokenStream {
         let generated: String = clean_up_generated(self.render_once().unwrap());

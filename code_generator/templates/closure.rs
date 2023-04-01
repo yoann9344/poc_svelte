@@ -9,5 +9,7 @@ let //ITEM <%= name %>
         if !r.borrow().dirty_ids.contains(&id) {
             r.borrow_mut().dirty_ids.insert(id);
         }
+        //FOR <% for stmt in &modified_idents { %>
+        //ITEM <%= stmt %> <% } %>
     }
 };

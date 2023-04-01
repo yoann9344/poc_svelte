@@ -200,6 +200,13 @@ pub enum ExprElement {
     Lit(LitStr),
 }
 
+fn parse_brace_fork(input: ParseStream) -> Result<(ParseBuffer, ParseBuffer)> {
+    let fork = input.fork();
+    let inner;
+    braced!(inner in fork);
+    Ok((fork, inner))
+}
+
 fn parse_brace(input: ParseStream) -> Result<ParseBuffer> {
     let inner;
     braced!(inner in input);
@@ -284,22 +291,29 @@ impl Parse for ExprElement {
             let mut children: Vec<Element> = Vec::new();
             let open_token: Token![for] = inner.fork().parse()?;
             let expr = inner.parse::<ForLoopWithoutBlock>()?.expr;
-            // Collect children Elements
             println!("Children -> 'for'");
+            // Collect children Elements
             loop {
-                match parse_brace(input) {
-                    Ok(inner) => {
-                        inner.parse::<Token![/]>()?;
-                        if let Err(_) = inner.parse::<Token![if]>() {
-                            double_error(
-                                &open_token.span,
-                                "Closing element's name does not match an opening element's name.",
-                                &inner.span(),
-                                "No closing element's name match this elements name.",
-                            )?;
-                        };
-                        break;
-                    }
+                match parse_brace_fork(input) {
+                    // Braces found
+                    Ok((fork_brace, inner_brace)) => match inner_brace.parse::<Token![/]>() {
+                        // close tag found
+                        Ok(_) => {
+                            if let Err(_) = inner_brace.parse::<Token![for]>() {
+                                double_error(
+                                        &open_token.span,
+                                        "Closing element's name does not match an opening element's name.",
+                                        &inner_brace.span(),
+                                        "No closing element's name match this elements name.",
+                                    )?;
+                            };
+                            input.advance_to(&fork_brace);
+                            break;
+                        }
+                        // inner expr found
+                        Err(_) => children.push(Element::ExprElement(input.parse()?)),
+                    },
+                    // braces not found : inner element found (else than expr)
                     Err(_) => children.push(input.parse()?),
                 }
             }
@@ -595,6 +609,7 @@ impl Parse for Element {
                 Self::Classic(input.parse()?)
             }
         } else {
+            println!("Parse else element");
             match parse_text_element(input)?.as_str() {
                 // Can't use Token![{] to detect a Brace so we detect it with an empty text
                 "" => Self::ExprElement(input.parse()?),
@@ -609,8 +624,8 @@ pub struct Root(pub Vec<Element>);
 impl Parse for Root {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut elements: Vec<Element> = Vec::new();
-        while let Ok(element) = input.parse() {
-            elements.push(element);
+        while !input.is_empty() {
+            elements.push(input.parse()?);
         }
         Ok(Root(elements))
     }
