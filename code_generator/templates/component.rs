@@ -4,6 +4,9 @@ use std::{
     collections::{HashMap, HashSet},
     rc::Rc,
 };
+
+#[allow(unused_imports)]
+use itertools::{self, EitherOrBoth, Itertools};
 use wasm_bindgen::prelude::*;
 use web_sys::{console, HtmlButtonElement as Button, HtmlInputElement as Input, Text};
 

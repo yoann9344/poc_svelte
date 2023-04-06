@@ -11,11 +11,11 @@ use syn::{
 };
 
 pub struct IdentExtractor {
-    idents: Vec<Ident>,
+    pub idents: Vec<Ident>,
 }
 
 impl IdentExtractor {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { idents: Vec::new() }
     }
 

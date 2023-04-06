@@ -7,6 +7,7 @@ mod check;
 mod html;
 mod state_block;
 mod template;
+mod thir;
 mod visitor;
 // use template::{block_from_templates, Imports, Macros, TemplateOnce};
 use template::Component;

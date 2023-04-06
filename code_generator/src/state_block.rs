@@ -18,6 +18,7 @@ pub struct EventClosure {
 pub struct LocalDetails {
     pub states: Vec<State>,
     pub events_closures: Vec<EventClosure>,
+    pub block: String,
 }
 
 impl LocalDetails {
@@ -71,6 +72,12 @@ impl LocalDetails {
 // fn extract_locals(block: &Block) -> Vec<LocalDetails> {
 pub fn extract_locals(block: &Block) -> Result<LocalDetails> {
     let mut details = LocalDetails::default();
+    details.block = block
+        .stmts
+        .iter()
+        .map(|stmt| quote::quote!(#stmt).to_string())
+        .collect::<Vec<_>>()
+        .join("\n");
     let locals: Vec<Local> = block
         .stmts
         .iter()

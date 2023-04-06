@@ -4,10 +4,14 @@
 //ITEM <%= dom.render_once().unwrap() %>
 //ITEM } <% } %>
 
-pub struct Props {}
+pub struct Props {
+    //FOR <% for (ident, type_) in &props { %>
+    //ITEM pub <%= ident %>: <%= type_ %>, <% } %>
+}
 
 pub struct DOM {
-    id: u32,
+    pub id: u32,
+    pub props: Props,
     //FOR <% for (ident, type_) in &fields { %>
     //ITEM <%= ident %>: <%= type_ %>, <% } %>
     // button0: Button,
@@ -17,7 +21,7 @@ pub struct DOM {
 }
 
 impl DOM {
-    pub fn from_state(state: Rc<RefCell<State>>, id: u32) -> Result<Self, JsValue> {
+    pub fn from_state(state: Rc<RefCell<State>>, id: u32, props: Props) -> Result<Self, JsValue> {
         let document = document!();
 
         //FOR <% for statement in &init { %>
@@ -29,16 +33,19 @@ impl DOM {
             //ITEM <%= ident %>, <% } %>
             // input,
             // button0,
+            props,
             state,
             mounted: false,
         })
     }
+    //IF <% if props.len() == 0 { %>
     pub fn new(runtime: Rc<RefCell<Runtime>>) -> Result<Self, JsValue> {
         let id = runtime.borrow_mut().next_key();
         let state = State::new(runtime, id);
 
-        DOM::from_state(state, id)
+        DOM::from_state(state, id, Props {})
     }
+    //ITEM <% } %>
 }
 
 impl Drop for DOM {

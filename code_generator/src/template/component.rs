@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;
@@ -93,7 +93,7 @@ impl Component {
             fields_value,
             callbacks,
         }));
-        let dom = Dom::generate(elements, local_details, state.clone(), true);
+        let dom = Dom::generate(elements, local_details, HashMap::new(), state.clone(), true);
 
         Self { dom }
     }
