@@ -6,7 +6,7 @@ use quote::quote;
 use syn::{visit::Visit, visit_mut::VisitMut};
 use syn::{ExprForLoop, Ident};
 
-use crate::thir::get_pat_bindings;
+use crate::thir;
 use crate::{
     html::{AttrExprType, Attribute, Classic, Condition, Element, ExprElement},
     state_block::LocalDetails,
@@ -396,7 +396,7 @@ impl Dom {
                 let for_loop_with_state = expr.clone();
                 let mut ident_modifier = details.get_ident_modifier("self.state");
                 ident_modifier.visit_expr_mut(&mut *for_loop_mount.expr);
-                let type_info = get_pat_bindings(
+                let type_info = thir::get_pat_bindings(
                     format!(
                         "{}\n{}",
                         details.block,

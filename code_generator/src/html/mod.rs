@@ -82,12 +82,27 @@ pub struct Attribute {
 impl Parse for Attribute {
     fn parse(input: ParseStream) -> Result<Self> {
         println!("Parse Attribute !");
-        let namespace_ident = input.call(Ident::parse_any)?;
-        let mut namespace: String = namespace_ident.to_string();
+        // let namespace_ident = input.call(Ident::parse_any)?;
+        let namespace_punct =
+            syn::punctuated::Punctuated::<Ident, syn::token::Sub>::parse_separated_nonempty_with(
+                input,
+                Ident::parse_any,
+            )?;
+        // Can't panic on first, parse_separated_nonempty return at least one element (or Err)
+        let namespace_ident = namespace_punct.first().unwrap();
+        let mut namespace: String = quote::quote!(#namespace_ident).to_string();
+        println!("NAMESPACE: {namespace}");
         let name: String;
         if input.peek(Colon) {
             let _: Colon = input.parse()?;
-            name = input.call(Ident::parse_any)?.to_string();
+            // name = input.call(Ident::parse_any)?.to_string();
+            let name_punct =
+                syn::punctuated::Punctuated::<Ident, syn::token::Sub>::parse_separated_nonempty_with(
+                    input,
+                    Ident::parse_any
+                )?;
+            name = quote::quote!(#name_punct).to_string();
+            println!("NAME: {name}");
         } else {
             name = namespace;
             namespace = "".to_string();
@@ -543,7 +558,17 @@ impl Parse for Classic {
         // Collect Attributes
         let mut attrs = Vec::new();
         while !(input.peek(CloseTag) || input.peek(SelfCloseVoidTag)) {
-            attrs.push(input.parse()?)
+            if input.peek(CloseTag) {
+                break;
+            } else if input.peek(SelfCloseVoidTag) {
+                return Ok(Self {
+                    name: name.to_string(),
+                    attrs,
+                    children: Vec::new(),
+                });
+            } else {
+                attrs.push(input.parse()?);
+            }
         }
 
         let mut children = Vec::new();
